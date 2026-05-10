@@ -5,7 +5,7 @@ local HttpService   = game:GetService("HttpService")
 local function okgiris()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/qimpflex/5jdc-hub/main/script"))()
 end
-
+print('SA')
 local LocalPlayer = Players.LocalPlayer
 local UserId      = tostring(LocalPlayer.UserId)
 
