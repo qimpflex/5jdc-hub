@@ -1,1 +1,344 @@
 
+-- ╔══════════════════════════════════════╗
+-- ║         KEY SYSTEM  - LocalScript   ║
+-- ║   GitHub'dan key & blacklist çeker  ║
+-- ╚══════════════════════════════════════╝
+
+local Players       = game:GetService("Players")
+local TweenService  = game:GetService("TweenService")
+local RunService    = game:GetService("RunService")
+local HttpService   = game:GetService("HttpService")
+
+local LocalPlayer   = Players.LocalPlayer
+local UserId        = tostring(LocalPlayer.UserId)
+
+-- ══════════════════════════════════════════
+--  AYARLAR  (sadece burayı düzenle)
+-- ══════════════════════════════════════════
+local CONFIG = {
+    GITHUB_URL     = "https://raw.githubusercontent.com/KULLANICI_ADI/REPO_ADI/main/keys.json",
+    CHECK_INTERVAL = 30,   -- blacklist kontrol süresi (saniye)
+    KICK_MESSAGE   = "⛔ Erişimin kaldırıldı.",
+    WRONG_KEY_MSG  = "❌ Geçersiz anahtar!",
+    BLACKLIST_MSG  = "🚫 Blacklist'e alındın.",
+    TITLE          = "KEY SYSTEM",
+}
+-- ══════════════════════════════════════════
+
+--[[
+  GitHub'daki keys.json formatı:
+  {
+    "keys": ["ANAHTAR-1111", "ANAHTAR-2222"],
+    "blacklist": ["123456789", "987654321"]
+  }
+  (blacklist'e UserId gir)
+]]
+
+-- ──────────────────────────────────────────
+-- HTTP yardımcısı (executor uyumlu)
+-- ──────────────────────────────────────────
+local function httpGet(url)
+    local ok, body = pcall(function()
+        if syn and syn.request then
+            return syn.request({ Url = url, Method = "GET" }).Body
+        elseif request then
+            return request({ Url = url, Method = "GET" }).Body
+        elseif http and http.request then
+            return http.request({ Url = url, Method = "GET" }).Body
+        else
+            return game:HttpGetAsync(url)
+        end
+    end)
+    if ok then return body end
+    return nil
+end
+
+-- GitHub JSON'u çek ve parse et
+local function fetchData()
+    local raw = httpGet(CONFIG.GITHUB_URL)
+    if not raw then return nil end
+    local ok, data = pcall(HttpService.JSONDecode, HttpService, raw)
+    if ok then return data end
+    return nil
+end
+
+-- ──────────────────────────────────────────
+-- Kick fonksiyonu
+-- ──────────────────────────────────────────
+local function kickPlayer(reason)
+    LocalPlayer:Kick(reason or CONFIG.KICK_MESSAGE)
+end
+
+-- ──────────────────────────────────────────
+-- MAT UI
+-- ──────────────────────────────────────────
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name          = "KeySystemUI"
+screenGui.ResetOnSpawn  = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent        = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Arka plan overlay
+local overlay = Instance.new("Frame")
+overlay.Size            = UDim2.fromScale(1, 1)
+overlay.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+overlay.BackgroundTransparency = 0.3
+overlay.ZIndex          = 9
+overlay.Parent          = screenGui
+
+-- Ana kart
+local card = Instance.new("Frame")
+card.Size               = UDim2.new(0, 380, 0, 260)
+card.Position           = UDim2.fromScale(0.5, 0.5)
+card.AnchorPoint        = Vector2.new(0.5, 0.5)
+card.BackgroundColor3   = Color3.fromRGB(15, 15, 18)
+card.BorderSizePixel    = 0
+card.ZIndex             = 10
+card.Parent             = screenGui
+
+local cardRadius = Instance.new("UICorner")
+cardRadius.CornerRadius = UDim.new(0, 10)
+cardRadius.Parent       = card
+
+-- Üst şerit (accent)
+local accent = Instance.new("Frame")
+accent.Size             = UDim2.new(1, 0, 0, 3)
+accent.BackgroundColor3 = Color3.fromRGB(80, 80, 220)
+accent.BorderSizePixel  = 0
+accent.ZIndex           = 11
+accent.Parent           = card
+
+local accentRadius = Instance.new("UICorner")
+accentRadius.CornerRadius = UDim.new(0, 10)
+accentRadius.Parent     = accent
+
+-- Başlık
+local title = Instance.new("TextLabel")
+title.Size              = UDim2.new(1, 0, 0, 40)
+title.Position          = UDim2.new(0, 0, 0, 14)
+title.BackgroundTransparency = 1
+title.Text              = CONFIG.TITLE
+title.TextColor3        = Color3.fromRGB(240, 240, 245)
+title.TextSize          = 13
+title.Font              = Enum.Font.GothamBold
+title.LetterSpacing     = 6
+title.ZIndex            = 11
+title.Parent            = card
+
+-- Alt çizgi başlık
+local divider = Instance.new("Frame")
+divider.Size            = UDim2.new(1, -40, 0, 1)
+divider.Position        = UDim2.new(0, 20, 0, 56)
+divider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+divider.BorderSizePixel  = 0
+divider.ZIndex           = 11
+divider.Parent           = card
+
+-- Açıklama
+local desc = Instance.new("TextLabel")
+desc.Size               = UDim2.new(1, -40, 0, 30)
+desc.Position           = UDim2.new(0, 20, 0, 66)
+desc.BackgroundTransparency = 1
+desc.Text               = "Erişim anahtarını gir"
+desc.TextColor3         = Color3.fromRGB(110, 110, 130)
+desc.TextSize           = 12
+desc.Font               = Enum.Font.Gotham
+desc.TextXAlignment     = Enum.TextXAlignment.Left
+desc.ZIndex             = 11
+desc.Parent             = card
+
+-- Input arka planı
+local inputBg = Instance.new("Frame")
+inputBg.Size            = UDim2.new(1, -40, 0, 42)
+inputBg.Position        = UDim2.new(0, 20, 0, 100)
+inputBg.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+inputBg.BorderSizePixel  = 0
+inputBg.ZIndex           = 11
+inputBg.Parent           = card
+
+local inputRadius = Instance.new("UICorner")
+inputRadius.CornerRadius = UDim.new(0, 7)
+inputRadius.Parent       = inputBg
+
+local inputStroke = Instance.new("UIStroke")
+inputStroke.Color       = Color3.fromRGB(40, 40, 55)
+inputStroke.Thickness   = 1
+inputStroke.Parent      = inputBg
+
+-- TextBox
+local textBox = Instance.new("TextBox")
+textBox.Size            = UDim2.new(1, -16, 1, 0)
+textBox.Position        = UDim2.new(0, 12, 0, 0)
+textBox.BackgroundTransparency = 1
+textBox.PlaceholderText = "XXXX-XXXX-XXXX"
+textBox.PlaceholderColor3 = Color3.fromRGB(60, 60, 75)
+textBox.Text            = ""
+textBox.TextColor3      = Color3.fromRGB(210, 210, 225)
+textBox.TextSize        = 13
+textBox.Font            = Enum.Font.Code
+textBox.ClearTextOnFocus = false
+textBox.ZIndex          = 12
+textBox.Parent          = inputBg
+
+-- Onayla butonu
+local btn = Instance.new("TextButton")
+btn.Size                = UDim2.new(1, -40, 0, 40)
+btn.Position            = UDim2.new(0, 20, 0, 156)
+btn.BackgroundColor3    = Color3.fromRGB(55, 55, 180)
+btn.BorderSizePixel     = 0
+btn.Text                = "ONAYLA"
+btn.TextColor3          = Color3.fromRGB(230, 230, 255)
+btn.TextSize            = 12
+btn.Font                = Enum.Font.GothamBold
+btn.LetterSpacing       = 4
+btn.ZIndex              = 11
+btn.Parent              = card
+
+local btnRadius = Instance.new("UICorner")
+btnRadius.CornerRadius  = UDim.new(0, 7)
+btnRadius.Parent        = btn
+
+-- Durum mesajı
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size        = UDim2.new(1, -40, 0, 28)
+statusLabel.Position    = UDim2.new(0, 20, 0, 206)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text        = ""
+statusLabel.TextColor3  = Color3.fromRGB(100, 100, 120)
+statusLabel.TextSize    = 11
+statusLabel.Font        = Enum.Font.Gotham
+statusLabel.ZIndex      = 11
+statusLabel.Parent      = card
+
+-- Hover efekti
+btn.MouseEnter:Connect(function()
+    TweenService:Create(btn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(75, 75, 210)
+    }):Play()
+end)
+btn.MouseLeave:Connect(function()
+    TweenService:Create(btn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(55, 55, 180)
+    }):Play()
+end)
+
+-- Input focus efekti
+textBox.Focused:Connect(function()
+    TweenService:Create(inputStroke, TweenInfo.new(0.2), {
+        Color = Color3.fromRGB(80, 80, 200)
+    }):Play()
+end)
+textBox.FocusLost:Connect(function()
+    TweenService:Create(inputStroke, TweenInfo.new(0.2), {
+        Color = Color3.fromRGB(40, 40, 55)
+    }):Play()
+end)
+
+-- Status göster
+local function setStatus(msg, color)
+    statusLabel.Text       = msg
+    statusLabel.TextColor3 = color or Color3.fromRGB(100, 100, 120)
+end
+
+-- UI'yi kapat
+local function closeUI()
+    TweenService:Create(card, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
+        Position = UDim2.new(0.5, 0, 1.2, 0),
+        BackgroundTransparency = 1,
+    }):Play()
+    TweenService:Create(overlay, TweenInfo.new(0.3), {
+        BackgroundTransparency = 1
+    }):Play()
+    task.delay(0.35, function() screenGui:Destroy() end)
+end
+
+-- ──────────────────────────────────────────
+-- Blacklist polling loop (30s)
+-- ──────────────────────────────────────────
+local function startBlacklistLoop()
+    task.spawn(function()
+        while task.wait(CONFIG.CHECK_INTERVAL) do
+            local data = fetchData()
+            if data and data.blacklist then
+                for _, id in ipairs(data.blacklist) do
+                    if tostring(id) == UserId then
+                        kickPlayer(CONFIG.BLACKLIST_MSG)
+                        return
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- ──────────────────────────────────────────
+-- Anahtar doğrulama
+-- ──────────────────────────────────────────
+local function validateKey()
+    local key = textBox.Text:gsub("%s", ""):upper()
+    if key == "" then
+        setStatus("⚠ Bir anahtar gir.", Color3.fromRGB(200, 160, 60))
+        return
+    end
+
+    setStatus("⏳ Doğrulanıyor...", Color3.fromRGB(100, 100, 180))
+    btn.Active = false
+
+    task.spawn(function()
+        local data = fetchData()
+
+        if not data then
+            setStatus("⚠ Sunucuya ulaşılamadı.", Color3.fromRGB(200, 80, 80))
+            btn.Active = true
+            return
+        end
+
+        -- Önce blacklist kontrolü
+        if data.blacklist then
+            for _, id in ipairs(data.blacklist) do
+                if tostring(id) == UserId then
+                    setStatus(CONFIG.BLACKLIST_MSG, Color3.fromRGB(200, 60, 60))
+                    task.delay(1.5, function() kickPlayer(CONFIG.BLACKLIST_MSG) end)
+                    return
+                end
+            end
+        end
+
+        -- Key kontrolü
+        if data.keys then
+            for _, validKey in ipairs(data.keys) do
+                if validKey:upper() == key then
+                    setStatus("✅ Erişim verildi!", Color3.fromRGB(60, 200, 120))
+                    task.delay(0.8, function()
+                        closeUI()
+                        startBlacklistLoop()
+                    end)
+                    return
+                end
+            end
+        end
+
+        -- Yanlış key
+        setStatus(CONFIG.WRONG_KEY_MSG, Color3.fromRGB(200, 80, 80))
+        TweenService:Create(inputStroke, TweenInfo.new(0.1), {
+            Color = Color3.fromRGB(200, 60, 60)
+        }):Play()
+        task.delay(1, function()
+            TweenService:Create(inputStroke, TweenInfo.new(0.2), {
+                Color = Color3.fromRGB(40, 40, 55)
+            }):Play()
+        end)
+        btn.Active = true
+    end)
+end
+
+btn.MouseButton1Click:Connect(validateKey)
+textBox.FocusLost:Connect(function(enter)
+    if enter then validateKey() end
+end)
+
+-- Giriş animasyonu
+card.Position = UDim2.new(0.5, 0, 1.5, 0)
+TweenService:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Position = UDim2.fromScale(0.5, 0.5)
+}):Play()
