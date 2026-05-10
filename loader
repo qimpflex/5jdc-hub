@@ -19,7 +19,7 @@ local UserId        = tostring(LocalPlayer.UserId)
 --  AYARLAR  (sadece burayı düzenle)
 -- ══════════════════════════════════════════
 local CONFIG = {
-    GITHUB_URL     = "https://raw.githubusercontent.com/qimpflex/5jdc-hub/blob/main/key.json",
+    GITHUB_URL     = "https://raw.githubusercontent.com/qimpflex/5jdc-hub/main/key.json",
     CHECK_INTERVAL = 30,   -- blacklist kontrol süresi (saniye)
     KICK_MESSAGE   = "⛔ Erişimin kaldırıldı.",
     WRONG_KEY_MSG  = "❌ Geçersiz anahtar!",
