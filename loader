@@ -8,7 +8,10 @@ local Players       = game:GetService("Players")
 local TweenService  = game:GetService("TweenService")
 local RunService    = game:GetService("RunService")
 local HttpService   = game:GetService("HttpService")
+local function okgiris()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/qimpflex/5jdc-hub/main/script"))() 
 
+end
 local LocalPlayer   = Players.LocalPlayer
 local UserId        = tostring(LocalPlayer.UserId)
 
@@ -310,6 +313,7 @@ local function validateKey()
                 if validKey:upper() == key then
                     setStatus("✅ Erişim verildi!", Color3.fromRGB(60, 200, 120))
                     task.delay(0.8, function()
+                    okgiris()
                         closeUI()
                         startBlacklistLoop()
                     end)
